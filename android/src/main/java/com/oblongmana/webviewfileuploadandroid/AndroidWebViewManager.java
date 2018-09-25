@@ -17,6 +17,8 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.CookieManager;
 import java.nio.charset.StandardCharsets;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLDecoder;
 
 import com.facebook.react.uimanager.annotations.ReactProp;
