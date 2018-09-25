@@ -15,7 +15,9 @@ import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
-
+import android.webkit.CookieManager;
+import java.nio.charset.StandardCharsets;
+import java.net.URLDecoder;
 
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.facebook.react.uimanager.ThemedReactContext;
@@ -90,10 +92,34 @@ public class AndroidWebViewManager extends ReactWebViewManager {
                     String contentDisposition, String mimetype,
                     long contentLength) {
 
-                String fileName = URLUtil.guessFileName(url,contentDisposition,mimetype);
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+
+                //Try to extract filename from contentDisposition, otherwise guess using URLUtil
+                String fileName = "";
+                try {
+                    fileName = contentDisposition.replaceFirst("(?i)^.*filename=\"?([^\"]+)\"?.*$", "$1");
+                    fileName = URLDecoder.decode(fileName, "UTF-8");
+                } catch (Exception e) {
+                    System.out.println("Error extracting filename from contentDisposition: " + e);
+                    System.out.println("Falling back to URLUtil.guessFileName");
+                    fileName = URLUtil.guessFileName(url,contentDisposition,mimetype);
+                }
                 String downloadMessage = "Downloading " + fileName;
 
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                //Attempt to add cookie, if it exists
+                URL urlObj = null;  
+                try {  
+                    urlObj = new URL(url);
+                    String baseUrl = urlObj.getProtocol() + "://" + urlObj.getHost();
+                    String cookie = CookieManager.getInstance().getCookie(baseUrl);  
+                    request.addRequestHeader("Cookie", cookie);
+                    System.out.println("Got cookie for DownloadManager: " + cookie);
+                } catch (MalformedURLException e) {
+                    System.out.println("Error getting cookie for DownloadManager: " + e.toString());
+                    e.printStackTrace();  
+                }
+
+                //Finish setting up request
                 request.addRequestHeader("User-Agent", userAgent);
                 request.setTitle(fileName);
                 request.setDescription(downloadMessage);
